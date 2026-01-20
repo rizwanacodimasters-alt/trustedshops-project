@@ -1,0 +1,37 @@
+// Predefined shop categories
+export const SHOP_CATEGORIES = [
+  'Baumarkt',
+  'Hobby, Sammeln & Freizeitartikel',
+  'Möbel & Dekorationsartikel',
+  'Haushaltswaren & Haushaltsgeräte',
+  'Auto, Motorrad & Zubehör',
+  'Büro, Schule & Beruf',
+  'Bekleidung',
+  'Lebensmittel',
+  'Drogerieartikel & Kosmetik',
+  'Tierbedarf',
+  'Computer, Unterhaltungselektronik & Zubehör',
+  'Gartenbedarf',
+  'Sportartikel',
+  'Geschenke',
+  'Genussmittel',
+  'Energie',
+  'Spielwaren, Baby & Kind',
+  'Medikamente',
+  'Schmuck & Uhren',
+  'Bücher',
+  'Foto, Druck & Book-on-Demand',
+  'Consulting',
+  'Schuhe',
+  'Koffer, Taschen & Lederwaren',
+  'Reisen & Hotels',
+  'Musik & Film',
+  'Finanzen & Versicherungen',
+  'Telekommunikation',
+  'Floristik',
+  'Tickets',
+  'Edelmetalle',
+  'Optiker'
+];
+
+export default SHOP_CATEGORIES;

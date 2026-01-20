@@ -1,0 +1,98 @@
+<analysis>
+The trajectory details the work of an AI engineer evolving a  clone. The development process, driven by user requests in German, progressed from initial feature implementation to significant bug fixing, security enhancements, and major architectural refactoring.
+
+Key achievements include:
+1.  **Email Verification System:** An SMTP-based email verification flow was implemented from scratch. This involved creating backend services (), new API routes (), and a frontend verification page (). A  was added to facilitate testing by returning the code in the API response.
+2.  **Critical Security Patches:** A major flaw allowing unverified users to access dashboards was rectified. This required backend changes to the login route () to check a user's verification status and frontend implementation of a  component to gate access to sensitive routes for both  and  roles.
+3.  **Advanced Review System:** A complex review management system, a core feature, was built out. This included:
+    *   Backend models () were extended to support review types (, ), proof uploads, and status tracking.
+    *   A mandatory proof-of-purchase (order number, image upload) flow for low-star reviews (1-3 stars) was implemented.
+    *   New admin routes () and a corresponding frontend UI () were created to allow administrators to approve or reject these pending reviews.
+4.  **Bug Fixing & UI/UX Improvements:** Numerous bugs were addressed, most notably a recurring issue with MongoDB aggregation pipelines failing due to inconsistent use of string s vs. BSON s. UI was improved with better form validation and the addition of search functionality to all review dashboards.
+
+The last task was to fix the review submission functionality on the shop detail page, which was reported as broken by the user after the mandatory evidence feature was added. The user also requested a success toast message upon submission.
+
+*Instruction for next agent: The user's primary language is German. All future responses MUST be in German.*
+</analysis>
+
+<product_requirements>
+The project is a full-stack clone of , a platform for shop reviews and trust certifications. It's designed to provide a trustworthy ecosystem for online shoppers and businesses.
+
+**Core User Roles & Features:**
+*   **Customers ():** Register, search for shops, and write reviews. Access to their dashboard is restricted until they verify their email via a code. They can edit/delete their reviews.
+*   **Shop Owners ():** Register their business, manage their shop profile, and view reviews. They are also subject to mandatory email verification before dashboard access.
+*   **Admins ():** Have a comprehensive dashboard to manage users, shops, and security. A key admin function is to manually approve or reject low-star reviews.
+
+**Key Functionality Implemented:**
+*   **Mandatory Email Verification:** A robust, SMTP-based email verification system is in place for all new users (shoppers and shop owners). Unverified users are blocked from accessing any protected content.
+*   **Advanced Review System:** A sophisticated review system has been implemented.
+    *   Reviews with 1-3 stars require mandatory evidence (order number, image uploads) before submission.
+    *   These low-star reviews are held in a  state and are not public until an Admin manually approves them.
+    *   The Admin dashboard features a dedicated section for managing these pending reviews.
+*   **Search Functionality:** A keyword search has been added to the Customer, Shop Owner, and Admin review dashboards.
+</product_requirements>
+
+<key_technical_concepts>
+- **Frontend:** React, React Router, Axios, Tailwind CSS, Shadcn/UI, React Context API (for Auth).
+- **Backend:** FastAPI (Python), MongoDB with  (async driver), Pydantic.
+- **Authentication:** JWT-based with role-based access control (, , ). The JWT payload includes the  status.
+- **Email:** Standard Python  for sending emails via an external SMTP server.
+- **Database:** MongoDB. A recurring technical issue is the inconsistent use of BSON  and string s, requiring careful handling in aggregation pipelines ().
+</key_technical_concepts>
+
+<code_architecture>
+The codebase is a monorepo with distinct  (React) and  (FastAPI) applications.
+
+
+
+- ****: Core of the review system.
+  - **Importance**: Handles creation, retrieval, and updates of reviews.
+  - **Changes**: Heavily modified to enforce the mandatory evidence rule for 1-3 star reviews. The creation logic now accepts  and  directly, sets the  to  for low-star ratings, and rejects submissions without the required proof. Also updated to include a text search query parameter.
+
+- ****: Manages user authentication.
+  - **Importance**: Central to application security.
+  - **Changes**: The  endpoint was updated to check for . If false, it still returns a token but includes  in the user data, allowing the frontend to enforce a redirect to the verification page.
+
+- ****: Defines the Pydantic data models.
+  - **Importance**: The single source of truth for data structures.
+  - **Changes**: The  and  models were significantly expanded to include  (e.g., 'pending', 'approved'), , , , and .
+
+- ****: User-facing page to view a shop and submit reviews.
+  - **Importance**: The primary point of interaction for users leaving reviews.
+  - **Changes**: The review submission form was completely overhauled. It now uses a new  component and conditionally displays the mandatory evidence section (order number, file upload) when the user selects a rating of 3 stars or less.
+
+- ****: A new HOC for route protection.
+  - **Importance**: Enforces the business logic that unverified users cannot access protected content.
+  - **Changes**: Created from scratch. It checks the  object from  and redirects to  if  is .
+
+- ****: New component for the Admin dashboard.
+  - **Importance**: Provides the UI for admins to manage the review approval workflow.
+  - **Changes**: Created to display all reviews with filtering tabs (Pending, Approved, etc.). It allows admins to approve or reject reviews, which triggers API calls to the new  backend.
+</code_architecture>
+
+<pending_tasks>
+- Fix the broken review submission (veröffentlichen) functionality on the  page.
+- Implement a toast/success message to inform the user that their low-star review has been submitted and is awaiting approval.
+- Implement profile picture uploads for users.
+- Implement account deactivation/deletion.
+- Add full pagination/load-more to all lists (reviews, favorites).
+- Implement enhanced, real-time validation for the  form.
+</pending_tasks>
+
+<current_work>
+The immediate focus is fixing a critical bug reported by the user: the publish review button on the  page is not working after the implementation of the mandatory evidence feature for 1-3 star reviews.
+
+**Work Done So Far:**
+1.  **Backend Ready:** The backend  was updated to handle the new submission logic. It now expects  and  for ratings <= 3 and includes validation for file size and type.
+2.  **Frontend Implemented (But Buggy):**
+    *   A reusable  component was created.
+    *   The review form in  was refactored to conditionally show the evidence fields (order number input, image upload component) based on the selected star rating.
+    *   The  function was updated to gather the new data (including Base64 encoded images) and send it to the backend.
+
+**The Problem:**
+Despite the implementation, the user reports that submitting a review fails. The last action taken by the previous engineer was to start the debugging process by taking a screenshot of the sign-in page to begin a full end-to-end test of the review submission flow as a logged-in user (). The root cause of the submission failure has not yet been identified.
+</current_work>
+
+<optional_next_step>
+Debug the review submission process on  to identify and fix why the Veröffentlichen (Publish) button is failing. Then, implement the user-requested success toast message.
+</optional_next_step>

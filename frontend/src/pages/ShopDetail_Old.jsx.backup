@@ -1,0 +1,360 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { shopAPI, reviewAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Textarea } from '../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { useToast } from '../hooks/use-toast';
+import { 
+  Star, 
+  ShieldCheck, 
+  Globe, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  ChevronLeft,
+  Loader2,
+  MessageSquare
+} from 'lucide-react';
+
+const ShopDetail = () => {
+  const { shopId } = useParams();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [shop, setShop] = useState(null);
+  const [reviews, setReviews] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [showReviewForm, setShowReviewForm] = useState(false);
+  const [newReview, setNewReview] = useState({ rating: 5, comment: '' });
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    fetchShop();
+    fetchReviews();
+  }, [shopId]);
+
+  const fetchShop = async () => {
+    try {
+      setLoading(true);
+      const response = await shopAPI.getShop(shopId);
+      setShop(response.data);
+    } catch (error) {
+      console.error('Error fetching shop:', error);
+      toast({
+        title: 'Error',
+        description: 'Shop nicht gefunden',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      setReviewsLoading(true);
+      const response = await reviewAPI.getReviews({ shop_id: shopId });
+      setReviews(response.data.reviews || []);
+    } catch (error) {
+      console.error('Error fetching reviews:', error);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const handleSubmitReview = async (e) => {
+    e.preventDefault();
+    
+    if (!user) {
+      toast({
+        title: 'Anmeldung erforderlich',
+        description: 'Bitte melden Sie sich an, um eine Bewertung abzugeben',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      await reviewAPI.createReview({
+        shop_id: shopId,
+        rating: newReview.rating,
+        comment: newReview.comment
+      });
+
+      toast({
+        title: 'Erfolg!',
+        description: 'Ihre Bewertung wurde veröffentlicht',
+      });
+
+      setShowReviewForm(false);
+      setNewReview({ rating: 5, comment: '' });
+      fetchShop();
+      fetchReviews();
+    } catch (error) {
+      toast({
+        title: 'Fehler',
+        description: error.response?.data?.detail || 'Bewertung konnte nicht gespeichert werden',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <p className="ml-2 text-gray-600">Shop wird geladen...</p>
+      </div>
+    );
+  }
+
+  if (!shop) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardContent className="p-12 text-center">
+            <h3 className="text-xl font-semibold mb-4">Shop nicht gefunden</h3>
+            <Link to="/shops">
+              <Button>Zurück zur Suche</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container mx-auto px-4">
+        {/* Breadcrumb */}
+        <div className="mb-6">
+          <Link to="/shops" className="text-amber-600 hover:text-amber-700 flex items-center">
+            <ChevronLeft className="w-4 h-4" />
+            Zurück zur Suche
+          </Link>
+        </div>
+
+        {/* Shop Header */}
+        <Card className="mb-8">
+          <CardContent className="p-8">
+            <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+              <div className="flex-1">
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="flex-1">
+                    <h1 className="text-4xl font-bold text-gray-900 mb-2">{shop.name}</h1>
+                    <p className="text-lg text-gray-600 mb-4">{shop.category}</p>
+                  </div>
+                  {shop.is_verified && (
+                    <Badge className="bg-green-100 text-green-800 flex items-center gap-2">
+                      <ShieldCheck className="w-4 h-4" />
+                      Verifiziert
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Rating */}
+                <div className="flex items-center mb-6">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-6 h-6 ${
+                          i < Math.round(shop.rating)
+                            ? 'fill-yellow-400 text-yellow-400'
+                            : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="ml-3 text-2xl font-bold text-gray-900">
+                    {shop.rating.toFixed(1)}
+                  </span>
+                  <span className="ml-2 text-gray-600">
+                    ({shop.review_count} {shop.review_count === 1 ? 'Bewertung' : 'Bewertungen'})
+                  </span>
+                </div>
+
+                {/* Description */}
+                {shop.description && (
+                  <p className="text-gray-700 mb-6">{shop.description}</p>
+                )}
+
+                {/* Contact Info */}
+                <div className="grid md:grid-cols-2 gap-4">
+                  {shop.website && (
+                    <a
+                      href={shop.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center text-amber-600 hover:text-amber-700"
+                    >
+                      <Globe className="w-5 h-5 mr-2" />
+                      {shop.website}
+                    </a>
+                  )}
+                  {shop.email && (
+                    <a href={`mailto:${shop.email}`} className="flex items-center text-gray-700 hover:text-gray-900">
+                      <Mail className="w-5 h-5 mr-2" />
+                      {shop.email}
+                    </a>
+                  )}
+                  {shop.phone && (
+                    <a href={`tel:${shop.phone}`} className="flex items-center text-gray-700 hover:text-gray-900">
+                      <Phone className="w-5 h-5 mr-2" />
+                      {shop.phone}
+                    </a>
+                  )}
+                  {shop.address && (
+                    <div className="flex items-center text-gray-700">
+                      <MapPin className="w-5 h-5 mr-2" />
+                      {shop.address}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* CTA */}
+              <div>
+                <Button
+                  onClick={() => setShowReviewForm(!showReviewForm)}
+                  className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-semibold"
+                >
+                  <MessageSquare className="w-4 h-4 mr-2" />
+                  Bewertung schreiben
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Review Form */}
+        {showReviewForm && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Bewertung schreiben</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitReview} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Bewertung *</label>
+                  <Select
+                    value={newReview.rating.toString()}
+                    onValueChange={(value) => setNewReview({ ...newReview, rating: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[5, 4, 3, 2, 1].map((rating) => (
+                        <SelectItem key={rating} value={rating.toString()}>
+                          <div className="flex items-center">
+                            {[...Array(rating)].map((_, i) => (
+                              <Star key={i} className="w-4 h-4 fill-yellow-400 text-yellow-400" />
+                            ))}
+                            <span className="ml-2">({rating} {rating === 1 ? 'Stern' : 'Sterne'})</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-2">Ihre Bewertung *</label>
+                  <Textarea
+                    value={newReview.comment}
+                    onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                    rows={4}
+                    placeholder="Teilen Sie Ihre Erfahrungen..."
+                    required
+                  />
+                </div>
+
+                <div className="flex gap-4">
+                  <Button
+                    type="submit"
+                    disabled={submitting}
+                    className="bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black"
+                  >
+                    {submitting ? 'Wird gesendet...' : 'Bewertung veröffentlichen'}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowReviewForm(false)}
+                  >
+                    Abbrechen
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Reviews */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Kundenbewertungen ({shop.review_count})</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {reviewsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-12">
+                <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <p className="text-gray-600">Noch keine Bewertungen vorhanden</p>
+                <p className="text-sm text-gray-500 mt-2">Seien Sie der Erste, der diesen Shop bewertet!</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {reviews.map((review) => (
+                  <div key={review.id} className="border-b pb-6 last:border-0">
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <div className="flex items-center mb-2">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-5 h-5 ${
+                                i < review.rating
+                                  ? 'fill-yellow-400 text-yellow-400'
+                                  : 'text-gray-300'
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <p className="font-semibold text-gray-900">{review.user_name || 'Anonymer Nutzer'}</p>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        {new Date(review.created_at).toLocaleDateString('de-DE')}
+                      </span>
+                    </div>
+                    <p className="text-gray-700">{review.comment}</p>
+                    
+                    {review.response && (
+                      <div className="mt-4 ml-8 p-4 bg-amber-50 rounded-lg">
+                        <p className="text-sm font-semibold text-amber-900 mb-2">Antwort vom Shop:</p>
+                        <p className="text-sm text-amber-800">{review.response}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default ShopDetail;
