@@ -33,8 +33,8 @@ from routes import (
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-MONGO_URL = mongodb+srv://<user>:<pass>@cluster.mongodb.net
-DB_NAME = trusted_shops
+MONGO_URL = 'mongodb+srv://<user>:<pass>@cluster.mongodb.net'
+DB_NAME = 'trusted_shops_clone'
 
 client = AsyncIOMotorClient(MONGO_URL)
 # db = client[os.environ['DB_NAME']]
