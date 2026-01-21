@@ -33,12 +33,10 @@ from routes import (
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-MONGO_URL = 'mongodb+srv://<user>:<pass>@cluster.mongodb.net'
-DB_NAME = 'trusted_shops_clone'
-
-client = AsyncIOMotorClient(MONGO_URL)
-# db = client[os.environ['DB_NAME']]
-db = client[DB_NAME]
+# MongoDB connection
+mongo_url = os.environ['MONGO_URL']
+client = AsyncIOMotorClient(mongo_url)
+db = client[os.environ['DB_NAME']]
 
 # Create the main app without a prefix
 app = FastAPI(
