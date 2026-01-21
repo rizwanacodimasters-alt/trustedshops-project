@@ -1,5 +1,4 @@
 from fastapi import FastAPI, APIRouter
-from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 import os
@@ -30,25 +29,33 @@ from routes import (
     email_verification_routes
 )
 
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+# Load .env only for local development
+if os.getenv("RAILWAY_ENV") != "production":
+    from dotenv import load_dotenv
+    ROOT_DIR = Path(__file__).parent
+    load_dotenv(ROOT_DIR / ".env")
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+mongo_url = os.environ.get("MONGO_URL")
+db_name = os.environ.get("DB_NAME", "trusted_shops_clone")  # default DB name
 
-# Create the main app without a prefix
+if not mongo_url:
+    raise ValueError("MONGO_URL environment variable is missing!")
+
+client = AsyncIOMotorClient(mongo_url)
+db = client[db_name]
+
+# Create the main app
 app = FastAPI(
     title="TrustedShops Clone API",
     description="Full-stack TrustedShops clone with user authentication, shop management, and review system",
     version="1.0.0"
 )
 
-# Create a router with the /api prefix
+# Create API router with /api prefix
 api_router = APIRouter(prefix="/api")
 
-# Health check endpoint
+# Health check
 @api_router.get("/")
 async def root():
     return {
@@ -81,7 +88,7 @@ api_router.include_router(email_verification_routes.router)
 # Proof upload routes
 api_router.include_router(proof_upload_routes.router)
 
-# Include the router in the main app
+# Include API router in main app
 app.include_router(api_router)
 
 # CORS middleware
@@ -103,8 +110,8 @@ logger = logging.getLogger(__name__)
 @app.on_event("startup")
 async def startup_event():
     logger.info("Starting TrustedShops Clone API...")
-    logger.info(f"Connected to MongoDB: {db.name}")
-    
+    logger.info(f"Connected to MongoDB database: {db.name}")
+
     # Create indexes
     await db.users.create_index("email", unique=True)
     await db.users.create_index("role")
@@ -129,10 +136,10 @@ async def startup_event():
     await db.user_sessions.create_index("is_active")
     await db.security_alerts.create_index("user_id")
     await db.security_alerts.create_index("resolved")
-    
+
     logger.info("Database indexes created successfully")
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
-    logger.info("Shutting down API...")
+    logger.info("Shutting down TrustedShops Clone API...")
     client.close()
